@@ -1,0 +1,58 @@
+@startuml
+!include <C4/C4_Container>
+
+title Диаграмма контейнеров маркетплейса
+
+Person(admin, "Администратор", "Управляет платформой, модерирует контент.")
+Person(seller, "Продавец", "Регистрируется, добавляет товары, управляет заказами.")
+Person(customer, "Клиент", "Просматривает товары, оформляет заказы, оставляет отзывы.")
+Person(support, "Служба поддержки", "Проводит онбординг и отвечает на тикеты.")
+
+System_Ext(banks, "Банки", "Обработка платежей и выплат.")
+System_Ext(notifications, "Система уведомлений", "Отправка уведомлений по email, SMS и push.")
+System_Ext(logistics, "Логистические компании", "Обработка заказов и управление доставкой.")
+
+System_Boundary(marketplace, "Маркетплейс") {
+    Container(web_app, "Веб-приложение", "JavaScript, React", "Интерфейс для пользователей (администраторов, продавцов, клиентов).")
+    Container(mobile_app, "Мобильное приложение", "Kotlin, Swift", "Интерфейс для клиентов и продавцов.")
+    Container(api_gateway, "API Gateway", "Node.js", "Единая точка входа для всех API-запросов.")
+    Container(auth_service, "Сервис аутентификации", "Java, Spring Boot", "Управление пользователями и аутентификация.")
+    Container(product_service, "Сервис товаров", "Python, Flask", "Управление товарами и их модерация.")
+    Container(order_service, "Сервис заказов", "Go", "Обработка заказов и управление статусами.")
+    Container(payment_service, "Сервис платежей", "Ruby on Rails", "Обработка платежей и интеграция с платежными системами.")
+    Container(logistics_service, "Сервис логистики", "C#", "Интеграция с логистическими партнерами.")
+    Container(notification_service, "Сервис уведомлений", "Node.js", "Отправка уведомлений пользователям.")
+    Container(support_service, "Сервис поддержки", "Python, Django", "Обработка тикетов и помощь пользователям.")
+    Container(database, "База данных", "PostgreSQL", "Хранение данных о пользователях, товарах, заказах и т.д.")
+}
+
+Rel(admin, web_app, "Управляет платформой через веб-интерфейс")
+Rel(seller, web_app, "Регистрируется, добавляет товары, управляет заказами")
+Rel(customer, mobile_app, "Просматривает товары, оформляет заказы")
+Rel(customer, web_app, "Просматривает товары, оформляет заказы")
+Rel(support, support_service, "Обрабатывает тикеты и помогает пользователям")
+
+Rel(web_app, api_gateway, "Отправляет запросы через API Gateway")
+Rel(mobile_app, api_gateway, "Отправляет запросы через API Gateway")
+
+Rel(api_gateway, auth_service, "Аутентификация и авторизация")
+Rel(api_gateway, product_service, "Запросы к товарам")
+Rel(api_gateway, order_service, "Запросы к заказам")
+Rel(api_gateway, payment_service, "Запросы к платежам")
+Rel(api_gateway, logistics_service, "Запросы к логистике")
+Rel(api_gateway, notification_service, "Запросы на отправку уведомлений")
+Rel(api_gateway, support_service, "Запросы к службе поддержки")
+
+Rel(auth_service, database, "Чтение/запись данных пользователей")
+Rel(product_service, database, "Чтение/запись данных товаров")
+Rel(order_service, database, "Чтение/запись данных заказов")
+Rel(payment_service, database, "Чтение/запись данных платежей")
+Rel(logistics_service, database, "Чтение/запись данных логистики")
+Rel(notification_service, database, "Чтение/запись данных уведомлений")
+Rel(support_service, database, "Чтение/запись данных тикетов")
+
+Rel(payment_service, banks, "Отправляет запросы на платежи и выплаты")
+Rel(notification_service, notifications, "Отправляет уведомления")
+Rel(logistics_service, logistics, "Отправляет данные о заказах и получает статусы доставки")
+
+@enduml
