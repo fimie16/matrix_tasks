@@ -1,0 +1,26 @@
+@startuml
+title Обработка платежа
+
+actor Клиент
+participant "Веб-приложение" as WebApp
+participant "API Gateway" as APIGateway
+participant "Сервис платежей" as PaymentService
+participant "База данных" as Database
+participant "Банки" as Banks
+participant "Сервис уведомлений" as NotificationService
+
+Клиент -> WebApp: Выбирает способ оплаты и подтверждает платеж
+WebApp -> APIGateway: Отправляет запрос на обработку платежа
+APIGateway -> PaymentService: Передает данные платежа
+PaymentService -> Database: Сохраняет информацию о платеже
+Database --> PaymentService: Подтверждает сохранение
+PaymentService -> Banks: Отправляет запрос на обработку платежа
+Banks --> PaymentService: Возвращает статус платежа
+PaymentService -> Database: Обновляет статус платежа
+Database --> PaymentService: Подтверждает обновление
+PaymentService -> NotificationService: Отправляет уведомление о статусе платежа
+NotificationService --> PaymentService: Подтверждает отправку уведомления
+PaymentService --> APIGateway: Возвращает статус платежа
+APIGateway --> WebApp: Возвращает статус платежа
+WebApp --> Клиент: Отображает статус платежа
+@enduml
