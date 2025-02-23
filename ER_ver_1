@@ -1,0 +1,93 @@
+@startuml
+entity sellers {
+  *id : INT <<PK>>
+  --
+  *name : VARCHAR(255)
+  *email : VARCHAR(255)
+  *password_hash : VARCHAR(255)
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity products {
+  *id : INT <<PK>>
+  --
+  *name : VARCHAR(255)
+  description : TEXT
+  *price : DECIMAL(10, 2)
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity seller_products {
+  *id : INT <<PK>>
+  --
+  *seller_id : INT <<FK>>
+  *product_id : INT <<FK>>
+  *stock : INT
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity customers {
+  *id : INT <<PK>>
+  --
+  *name : VARCHAR(255)
+  *email : VARCHAR(255)
+  *password_hash : VARCHAR(255)
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity orders {
+  *id : INT <<PK>>
+  --
+  *customer_id : INT <<FK>>
+  *seller_id : INT <<FK>>
+  *total_amount : DECIMAL(10, 2)
+  *status : VARCHAR(50)
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity order_items {
+  *id : INT <<PK>>
+  --
+  *order_id : INT <<FK>>
+  *product_id : INT <<FK>>
+  *quantity : INT
+  *price : DECIMAL(10, 2)
+}
+
+entity reviews {
+  *id : INT <<PK>>
+  --
+  *product_id : INT <<FK>>
+  *customer_id : INT <<FK>>
+  *rating : INT
+  comment : TEXT
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity payments {
+  *id : INT <<PK>>
+  --
+  *order_id : INT <<FK>>
+  *amount : DECIMAL(10, 2)
+  *status : VARCHAR(50)
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+sellers ||--o{ seller_products : "1 to many"
+products ||--o{ seller_products : "1 to many"
+seller_products }o--|| orders : "1 to many"
+customers ||--o{ orders : "1 to many"
+orders ||--o{ order_items : "1 to many"
+products ||--o{ order_items : "1 to many"
+products ||--o{ reviews : "1 to many"
+customers ||--o{ reviews : "1 to many"
+orders ||--o{ payments : "1 to 1"
+
+@enduml
