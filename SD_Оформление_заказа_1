@@ -1,0 +1,24 @@
+@startuml
+title Оформление заказа
+
+actor Клиент
+participant "Веб-приложение" as WebApp
+participant "API Gateway" as APIGateway
+participant "Сервис заказов" as OrderService
+participant "База данных" as Database
+participant "Сервис уведомлений" as NotificationService
+participant "Логистический сервис" as LogisticsService
+
+Клиент -> WebApp: Выбирает товары и оформляет заказ
+WebApp -> APIGateway: Отправляет запрос на создание заказа
+APIGateway -> OrderService: Передает данные заказа
+OrderService -> Database: Сохраняет заказ
+Database --> OrderService: Подтверждает сохранение
+OrderService -> LogisticsService: Отправляет данные заказа для доставки
+LogisticsService --> OrderService: Подтверждает получение данных
+OrderService -> NotificationService: Отправляет уведомление о создании заказа
+NotificationService --> OrderService: Подтверждает отправку уведомления
+OrderService --> APIGateway: Возвращает статус заказа
+APIGateway --> WebApp: Возвращает статус заказа
+WebApp --> Клиент: Отображает подтверждение заказа
+@enduml
