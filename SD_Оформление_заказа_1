@@ -5,15 +5,21 @@ actor Клиент
 participant "Веб-приложение" as WebApp
 participant "API Gateway" as APIGateway
 participant "Сервис заказов" as OrderService
-participant "База данных" as Database
+participant "База данных заказов" as OrderDB
 participant "Сервис уведомлений" as NotificationService
 participant "Логистический сервис" as LogisticsService
+participant "Сервис товаров" as ProductService
+participant "Сервис клиентов" as CustomerService
 
 Клиент -> WebApp: Выбирает товары и оформляет заказ
 WebApp -> APIGateway: Отправляет запрос на создание заказа
 APIGateway -> OrderService: Передает данные заказа
-OrderService -> Database: Сохраняет заказ
-Database --> OrderService: Подтверждает сохранение
+OrderService -> ProductService: Проверяет наличие товаров
+ProductService --> OrderService: Возвращает информацию о товарах
+OrderService -> CustomerService: Проверяет данные клиента
+CustomerService --> OrderService: Возвращает данные клиента
+OrderService -> OrderDB: Сохраняет заказ
+OrderDB --> OrderService: Подтверждает сохранение
 OrderService -> LogisticsService: Отправляет данные заказа для доставки
 LogisticsService --> OrderService: Подтверждает получение данных
 OrderService -> NotificationService: Отправляет уведомление о создании заказа
