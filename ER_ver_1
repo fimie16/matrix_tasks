@@ -1,93 +1,328 @@
 @startuml
-entity sellers {
-  *id : INT <<PK>>
-  --
-  *name : VARCHAR(255)
-  *email : VARCHAR(255)
-  *password_hash : VARCHAR(255)
-  created_at : TIMESTAMP
-  updated_at : TIMESTAMP
-}
+' Настройки отображения
+hide circle
+skinparam linetype ortho
 
+' Микросервис: Товары
 entity products {
-  *id : INT <<PK>>
+  *id : INT
   --
   *name : VARCHAR(255)
   description : TEXT
-  *price : DECIMAL(10, 2)
+  *category_id : INT
+  brand : VARCHAR(255)
   created_at : TIMESTAMP
   updated_at : TIMESTAMP
 }
 
-entity seller_products {
-  *id : INT <<PK>>
+entity product_operations {
+  *id : bigserial
   --
-  *seller_id : INT <<FK>>
-  *product_id : INT <<FK>>
-  *stock : INT
-  created_at : TIMESTAMP
-  updated_at : TIMESTAMP
+  *product_id : INT
+  operation_type : VARCHAR(50)
+  *category_id : INT
+  details : JSON
+  *performed_by : INT
+  performed_at : TIMESTAMP
 }
 
-entity customers {
-  *id : INT <<PK>>
+entity categories {
+  *id : bigserial
   --
   *name : VARCHAR(255)
-  *email : VARCHAR(255)
-  *password_hash : VARCHAR(255)
   created_at : TIMESTAMP
   updated_at : TIMESTAMP
 }
 
-entity orders {
-  *id : INT <<PK>>
+' Микросервис: Связь продавцов и товаров
+entity seller_products {
+  *id : INT
   --
-  *customer_id : INT <<FK>>
-  *seller_id : INT <<FK>>
-  *total_amount : DECIMAL(10, 2)
-  *status : VARCHAR(50)
+  *seller_id : INT
+  *product_id : INT
+  price : DECIMAL(10, 2)
+  stock : INT
+  is_active : BOOLEAN
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity product_stocks {
+  *id : INT
+  --
+  *seller_product_id : INT
+  stock : INT
+  *changed_by : INT
+  changed_at : TIMESTAMP
+}
+
+' Микросервис: Цены
+entity prices {
+  *id : INT
+  --
+  *seller_product_id : INT
+  price : DECIMAL(10, 2)
+  *changed_by : INT
+  changed_at : TIMESTAMP
+}
+
+' Микросервис: Оформление заказов
+entity orders {
+  *id : INT
+  --
+  *customer_id : INT
+  *seller_id : INT
+  total_amount : DECIMAL(10, 2)
+  status : VARCHAR(50)
   created_at : TIMESTAMP
   updated_at : TIMESTAMP
 }
 
 entity order_items {
-  *id : INT <<PK>>
+  *id : INT
   --
-  *order_id : INT <<FK>>
-  *product_id : INT <<FK>>
-  *quantity : INT
-  *price : DECIMAL(10, 2)
+  *order_id : INT
+  *product_id : INT
+  quantity : INT
+  price : DECIMAL(10, 2)
 }
 
-entity reviews {
-  *id : INT <<PK>>
+' Микросервис: Клиенты
+entity customers {
+  *id : INT
   --
-  *product_id : INT <<FK>>
-  *customer_id : INT <<FK>>
-  *rating : INT
-  comment : TEXT
+  *name : VARCHAR(255)
+  *email : VARCHAR(255)
+  *password_hash : VARCHAR(255)
   created_at : TIMESTAMP
   updated_at : TIMESTAMP
 }
 
+' Микросервис: Секьюрити
+entity users {
+  *id : INT
+  --
+  *email : VARCHAR(255)
+  *password_hash : VARCHAR(255)
+  *role_group : VARCHAR(50)
+}
+
+entity role_groups {
+  *id : INT
+  --
+  *name : VARCHAR(255)
+}
+
+entity permissions_for_role_groups {
+  *id : INT
+  --
+  *role_group_id : INT
+  *permission : VARCHAR(255)
+}
+
+' Микросервис: Логистика
+entity deliveries {
+  *id : INT
+  --
+  *order_id : INT
+  *warehouse_id : INT
+  *carrier_id : INT
+  delivery_address : VARCHAR(255)
+  status : VARCHAR(50)
+  estimated_delivery_time : TIMESTAMP
+  actual_delivery_time : TIMESTAMP
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity warehouses {
+  *id : INT
+  --
+  *name : VARCHAR(255)
+  *address : VARCHAR(255)
+  capacity : INT
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity warehouse_stocks {
+  *id : INT
+  --
+  *warehouse_id : INT
+  *product_seller_id : INT
+  stock : INT
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity carriers {
+  *id : INT
+  --
+  *name : VARCHAR(255)
+  contact_info : VARCHAR(255)
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity delivery_routes {
+  *id : INT
+  --
+  *delivery_id : INT
+  start_point : VARCHAR(255)
+  end_point : VARCHAR(255)
+  distance : DECIMAL(10, 2)
+  estimated_time : INT
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity delivery_tracking {
+  *id : INT
+  --
+  *delivery_id : INT
+  location : VARCHAR(255)
+  status : VARCHAR(50)
+  updated_at : TIMESTAMP
+}
+
+' Микросервис: Оповещения
+entity notifications {
+  *id : INT
+  --
+  *user_id : INT
+  message : TEXT
+  status : VARCHAR(50)
+  created_at : TIMESTAMP
+}
+
+' Микросервис: Сервис платежей
 entity payments {
-  *id : INT <<PK>>
+  *id : INT
   --
-  *order_id : INT <<FK>>
-  *amount : DECIMAL(10, 2)
-  *status : VARCHAR(50)
+  *order_id : INT
+  amount : DECIMAL(10, 2)
+  status : VARCHAR(50)
   created_at : TIMESTAMP
   updated_at : TIMESTAMP
 }
 
-sellers ||--o{ seller_products : "1 to many"
-products ||--o{ seller_products : "1 to many"
-seller_products }o--|| orders : "1 to many"
-customers ||--o{ orders : "1 to many"
-orders ||--o{ order_items : "1 to many"
-products ||--o{ order_items : "1 to many"
-products ||--o{ reviews : "1 to many"
-customers ||--o{ reviews : "1 to many"
-orders ||--o{ payments : "1 to 1"
+' Микросервис: Сервис скидок
+entity discounts {
+  *id : INT
+  --
+  *name : VARCHAR(255)
+  value : DECIMAL(10, 2)
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+' Микросервис: Сервис поддержки
+entity support_tickets {
+  *id : INT
+  --
+  *user_id : INT
+  message : TEXT
+  ticket_status : VARCHAR(50)
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity responsible_worker {
+  *id : INT
+  --
+  *resp_support_worker : INT
+  *support_ticket_id : INT
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+' Микросервис: Администрирование
+entity admins {
+  *id : INT
+  --
+  *name : VARCHAR(255)
+  *email : VARCHAR(255)
+  *role : VARCHAR(50)
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity platform_settings {
+  *id : INT
+  --
+  *key : VARCHAR(255)
+  *value : TEXT
+  description : TEXT
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity audit_logs {
+  *id : INT
+  --
+  *user_id : INT
+  *user_type : VARCHAR(50)
+  *action : VARCHAR(255)
+  details : TEXT
+  ip_address : VARCHAR(50)
+  created_at : TIMESTAMP
+}
+
+entity banned_users {
+  *id : INT
+  --
+  *user_id : INT
+  *user_type : VARCHAR(50)
+  reason : TEXT
+  *banned_by : INT
+  banned_at : TIMESTAMP
+  unbanned_at : TIMESTAMP
+}
+
+entity roles {
+  *id : INT
+  --
+  *name : VARCHAR(255)
+  description : TEXT
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity permissions {
+  *id : INT
+  --
+  *role_id : INT
+  *permission : VARCHAR(255)
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+' Связи между таблицами
+products ||--o{ product_operations : "1..n"
+categories ||--o{ products : "1..n"
+seller_products }o--|| products : "1..n"
+seller_products }o--|| sellers : "1..n"
+product_stocks }o--|| seller_products : "1..n"
+prices }o--|| seller_products : "1..n"
+orders ||--o{ order_items : "1..n"
+orders }o--|| customers : "1..n"
+orders }o--|| sellers : "1..n"
+order_items }o--|| products : "1..n"
+users }o--|| role_groups : "1..n"
+role_groups ||--o{ permissions_for_role_groups : "1..n"
+deliveries }o--|| orders : "1..n"
+deliveries }o--|| warehouses : "1..n"
+deliveries }o--|| carriers : "1..n"
+warehouse_stocks }o--|| warehouses : "1..n"
+warehouse_stocks }o--|| seller_products : "1..n"
+delivery_routes }o--|| deliveries : "1..n"
+delivery_tracking }o--|| deliveries : "1..n"
+notifications }o--|| users : "1..n"
+payments }o--|| orders : "1..n"
+support_tickets }o--|| users : "1..n"
+responsible_worker }o--|| support_tickets : "1..n"
+admins ||--o{ audit_logs : "1..n"
+admins ||--o{ banned_users : "1..n"
+roles ||--o{ permissions : "1..n"
 
 @enduml
