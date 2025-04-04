@@ -1,4 +1,4 @@
-@startuml
+@startuml marketplace_er_diagram
 ' Настройки отображения
 hide circle
 skinparam linetype ortho
@@ -30,6 +30,17 @@ entity categories {
   *id : bigserial
   --
   *name : VARCHAR(255)
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+' Микросервис: Продавцы
+entity sellers {
+  *id : INT
+  --
+  *name : VARCHAR(255)
+  *email : VARCHAR(255)
+  *password_hash : VARCHAR(255)
   created_at : TIMESTAMP
   updated_at : TIMESTAMP
 }
@@ -307,7 +318,7 @@ prices }o--|| seller_products : "1..n"
 orders ||--o{ order_items : "1..n"
 orders }o--|| customers : "1..n"
 orders }o--|| sellers : "1..n"
-order_items }o--|| products : "1..n"
+order_items }o--|| seller_products : "1..n"
 users }o--|| role_groups : "1..n"
 role_groups ||--o{ permissions_for_role_groups : "1..n"
 deliveries }o--|| orders : "1..n"
@@ -321,8 +332,26 @@ notifications }o--|| users : "1..n"
 payments }o--|| orders : "1..n"
 support_tickets }o--|| users : "1..n"
 responsible_worker }o--|| support_tickets : "1..n"
+responsible_worker }o--|| admins : "1..n"
 admins ||--o{ audit_logs : "1..n"
 admins ||--o{ banned_users : "1..n"
 roles ||--o{ permissions : "1..n"
+admins }o--|| roles : "1..n"
+customers }o--|| users : "1..1"
+sellers }o--|| users : "1..1"
+product_operations }o--|| users : "1..1"
+prices }o--|| users : "1..1"
+product_stocks }o--|| users : "1..1"
+discounts ||--o{ order_items : "0..n"
+
+' Новые связи
+orders }o--|| payments : "1..1"
+notifications }o--|| orders : "0..n"
+notifications }o--|| payments : "0..n"
+notifications }o--|| deliveries : "0..n"
+audit_logs }o--|| orders : "0..n"
+audit_logs }o--|| products : "0..n"
+audit_logs }o--|| sellers : "0..n"
+audit_logs }o--|| customers : "0..n"
 
 @enduml
