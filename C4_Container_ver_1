@@ -3,56 +3,105 @@
 
 title Диаграмма контейнеров маркетплейса
 
-Person(admin, "Администратор", "Управляет платформой, модерирует контент.")
-Person(seller, "Продавец", "Регистрируется, добавляет товары, управляет заказами.")
-Person(customer, "Клиент", "Просматривает товары, оформляет заказы, оставляет отзывы.")
-Person(support, "Служба поддержки", "Проводит онбординг и отвечает на тикеты.")
+Person(admin, "Администратор", "Управление платформой и модерация")
+Person(seller, "Продавец", "Управление товарами и заказами")
+Person(customer, "Клиент", "Покупка товаров и отслеживание заказов")
+Person(support_agent, "Агент поддержки", "Решение проблем пользователей")
 
-System_Ext(banks, "Банки", "Обработка платежей и выплат.")
-System_Ext(notifications, "Система уведомлений", "Отправка уведомлений по email, SMS и push.")
-System_Ext(logistics, "Логистические компании", "Обработка заказов и управление доставкой.")
+System_Ext(payment_gateway, "Платежный шлюз", "Интеграция с банками/PSP")
+System_Ext(logistics_system, "Логистическая система", "Управление доставкой")
+System_Ext(notification_provider, "Провайдер уведомлений", "Email/SMS/Push")
 
-System_Boundary(marketplace, "Маркетплейс") {
-    Container(web_app, "Веб-приложение", "JavaScript, React", "Интерфейс для пользователей (администраторов, продавцов, клиентов).")
-    Container(mobile_app, "Мобильное приложение", "Kotlin, Swift", "Интерфейс для клиентов и продавцов.")
-    Container(api_gateway, "API Gateway", "Node.js", "Единая точка входа для всех API-запросов.")
-    Container(auth_service, "Сервис аутентификации", "Java, Spring Boot", "Управление пользователями и аутентификация.")
-    Container(product_service, "Сервис товаров", "Python, Flask", "Управление товарами и их модерация.")
-    Container(order_service, "Сервис заказов", "Go", "Обработка заказов и управление статусами.")
-    Container(payment_service, "Сервис платежей", "Ruby on Rails", "Обработка платежей и интеграция с платежными системами.")
-    Container(logistics_service, "Сервис логистики", "C#", "Интеграция с логистическими партнерами.")
-    Container(notification_service, "Сервис уведомлений", "Node.js", "Отправка уведомлений пользователям.")
-    Container(support_service, "Сервис поддержки", "Python, Django", "Обработка тикетов и помощь пользователям.")
-    Container(database, "База данных", "PostgreSQL", "Хранение данных о пользователях, товарах, заказах и т.д.")
+System_Boundary(marketplace, "Платформа маркетплейса") {
+    ' Клиентские приложения
+    Container(spa, "Веб-интерфейс", "React", "SPA для всех пользователей")
+    Container(mobile_app, "Мобильное приложение", "Kotlin/Swift", "iOS/Android приложения")
+    
+    ' API Gateway
+    Container(api_gateway, "API Gateway", "Kong", "Единая точка входа, лимитирование запросов")
+    
+    ' Основные сервисы
+    Container(auth_service, "Сервис аутентификации", "Keycloak", "Учетные записи, роли, права")
+    Container(products_service, "Сервис товаров", "Spring Boot", "CRUD товаров и категорий")
+    Container(seller_products_service, "Связь товаров и продавцов", "Go", "Маппинг товаров к продавцам")
+    Container(pricing_service, "Сервис цен", "Python", "История изменений цен")
+    Container(orders_service, "Сервис заказов", "Java", "Оформление и обработка заказов")
+    Container(inventory_service, "Сервис склада", "C#", "Управление остатками")
+    Container(payments_service, "Сервис платежей", "Node.js", "Обработка транзакций")
+    Container(logistics_service, "Сервис логистики", "Go", "Интеграция с перевозчиками")
+    Container(notifications_service, "Сервис уведомлений", "Node.js", "Управление нотификациями")
+    Container(reviews_service, "Сервис отзывов", "Python", "Модерация отзывов")
+    Container(support_service, "Сервис поддержки", "Django", "Тикетная система")
+    Container(admin_service, "Сервис администрирования", "Java", "Управление платформой")
+    
+    ' Базы данных
+    ContainerDb(products_db, "База товаров", "PostgreSQL", "Товары, категории, операции (products, product_operations, categories)")
+    ContainerDb(seller_products_db, "База продавцов", "PostgreSQL", "Маппинг товаров (seller_products, product_stocks)")
+    ContainerDb(orders_db, "База заказов", "PostgreSQL", "Заказы и позиции (orders, order_items)")
+    ContainerDb(customers_db, "База клиентов", "PostgreSQL", "Данные покупателей (customers)")
+    ContainerDb(auth_db, "База аутентификации", "PostgreSQL", "Пользователи и роли (users, role_groups)")
+    ContainerDb(support_db, "База поддержки", "MongoDB", "Тикеты и чаты (support_tickets)")
+    ContainerDb(warehouses_db, "База складов", "PostgreSQL", "Склады и остатки (warehouses, warehouse_stocks)")
 }
 
-Rel(admin, web_app, "Управляет платформой через веб-интерфейс")
-Rel(seller, web_app, "Регистрируется, добавляет товары, управляет заказами")
-Rel(customer, mobile_app, "Просматривает товары, оформляет заказы")
-Rel(customer, web_app, "Просматривает товары, оформляет заказы")
-Rel(support, support_service, "Обрабатывает тикеты и помогает пользователям")
+' Взаимодействия пользователей
+Rel(customer, spa, "Просмотр товаров, оформление заказов", "HTTPS")
+Rel(customer, mobile_app, "Мобильный доступ к платформе", "HTTPS")
+Rel(seller, spa, "Управление товарами и заказами", "HTTPS")
+Rel(admin, spa, "Администрирование системы", "HTTPS")
+Rel(support_agent, support_service, "Обработка обращений", "Internal")
 
-Rel(web_app, api_gateway, "Отправляет запросы через API Gateway")
-Rel(mobile_app, api_gateway, "Отправляет запросы через API Gateway")
+' Маршрутизация через API Gateway
+Rel(spa, api_gateway, "Все API запросы", "REST/GraphQL")
+Rel(mobile_app, api_gateway, "Все API запросы", "REST/GraphQL")
 
-Rel(api_gateway, auth_service, "Аутентификация и авторизация")
-Rel(api_gateway, product_service, "Запросы к товарам")
-Rel(api_gateway, order_service, "Запросы к заказам")
-Rel(api_gateway, payment_service, "Запросы к платежам")
-Rel(api_gateway, logistics_service, "Запросы к логистике")
-Rel(api_gateway, notification_service, "Запросы на отправку уведомлений")
-Rel(api_gateway, support_service, "Запросы к службе поддержки")
+' Аутентификация и авторизация
+Rel(api_gateway, auth_service, "Проверка токенов", "JWT")
+Rel(auth_service, auth_db, "Хранение данных пользователей", "JDBC")
 
-Rel(auth_service, database, "Чтение/запись данных пользователей")
-Rel(product_service, database, "Чтение/запись данных товаров")
-Rel(order_service, database, "Чтение/запись данных заказов")
-Rel(payment_service, database, "Чтение/запись данных платежей")
-Rel(logistics_service, database, "Чтение/запись данных логистики")
-Rel(notification_service, database, "Чтение/запись данных уведомлений")
-Rel(support_service, database, "Чтение/запись данных тикетов")
+' Товары и продавцы
+Rel(api_gateway, products_service, "Управление товарами", "REST")
+Rel(products_service, products_db, "Хранение данных о товарах", "JDBC")
+Rel(api_gateway, seller_products_service, "Маппинг товаров", "REST")
+Rel(seller_products_service, seller_products_db, "Хранение связей", "JDBC")
+Rel(seller_products_service, products_service, "Проверка товаров", "gRPC")
 
-Rel(payment_service, banks, "Отправляет запросы на платежи и выплаты")
-Rel(notification_service, notifications, "Отправляет уведомления")
-Rel(logistics_service, logistics, "Отправляет данные о заказах и получает статусы доставки")
+' Цены и инвентарь
+Rel(api_gateway, pricing_service, "Управление ценами", "REST")
+Rel(pricing_service, seller_products_db, "История цен", "JDBC")
+Rel(api_gateway, inventory_service, "Управление остатками", "REST")
+Rel(inventory_service, warehouses_db, "Данные складов", "JDBC")
+
+' Заказы и платежи
+Rel(api_gateway, orders_service, "Оформление заказов", "REST")
+Rel(orders_service, orders_db, "Хранение заказов", "JDBC")
+Rel(orders_service, seller_products_service, "Проверка доступности", "gRPC")
+Rel(orders_service, pricing_service, "Получение актуальных цен", "gRPC")
+Rel(orders_service, payments_service, "Инициирование платежа", "Events")
+Rel(payments_service, payment_gateway, "Обработка платежей", "HTTPS/API")
+
+' Логистика
+Rel(api_gateway, logistics_service, "Управление доставкой", "REST")
+Rel(logistics_service, logistics_system, "Интеграция с перевозчиками", "API")
+Rel(logistics_service, warehouses_db, "Данные о складах", "JDBC")
+
+' Отзывы и поддержка
+Rel(api_gateway, reviews_service, "Управление отзывами", "REST")
+Rel(reviews_service, products_db, "Связь с товарами", "JDBC")
+Rel(reviews_service, customers_db, "Связь с клиентами", "JDBC")
+Rel(api_gateway, support_service, "Тикетная система", "REST")
+Rel(support_service, support_db, "Хранение тикетов", "MongoDB Driver")
+Rel(support_service, auth_db, "Проверка пользователей", "JDBC")
+
+' Уведомления
+Rel(api_gateway, notifications_service, "Управление подписками", "WebSocket")
+Rel(notifications_service, notification_provider, "Отправка уведомлений", "API")
+Rel(orders_service, notifications_service, "Уведомления о заказах", "Kafka")
+Rel(support_service, notifications_service, "Уведомления о тикетах", "Kafka")
+
+' Администрирование
+Rel(api_gateway, admin_service, "Административные функции", "REST")
+Rel(admin_service, products_db, "Модерация товаров", "JDBC")
+Rel(admin_service, reviews_db, "Модерация отзывов", "JDBC")
 
 @enduml
