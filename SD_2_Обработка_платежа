@@ -1,82 +1,51 @@
-@startuml order_creation_with_payment
-title Оформление заказа с обработкой платежа
+@startuml payment_processing_sequence
+title Процессинг платежа
 
 actor Клиент as customer
 participant "Веб-интерфейс (SPA)" as spa
 participant "API Gateway" as gateway
-participant "Сервис аутентификации" as auth
-participant "Сервис товаров" as products
-database "БД товаров" as products_db
-participant "Сервис цен" as pricing
-database "БД цен" as pricing_db
 participant "Сервис заказов" as orders
 database "БД заказов" as orders_db
-participant "Сервис склада" as inventory
-database "БД склада" as inventory_db
-participant "Сервис платежей" as payment
+participant "Сервис платежей" as payments
 database "БД платежей" as payments_db
 participant "Платежный шлюз" as payment_gateway
 participant "Сервис уведомлений" as notifications
 
-customer -> spa : Оформление заказа
-spa -> gateway : POST /orders {items}
+customer -> spa : Нажатие "Оплатить"
+spa -> gateway : POST /payments {order_id, card_details}
+gateway -> orders : Проверить заказ
+orders -> orders_db : SELECT order (status=AWAITING_PAYMENT)
+orders_db --> orders : Данные заказа
+orders --> gateway : 200 OK (order_amount)
 
-gateway -> auth : Проверить токен
-auth --> gateway : 200 OK (user_id)
-
-gateway -> products : Проверить наличие товаров
-products -> products_db : SELECT availability
-products_db --> products : Данные о наличии
-products --> gateway : 200 OK (available_items)
-
-gateway -> pricing : Получить актуальные цены
-pricing -> pricing_db : SELECT current_prices
-pricing_db --> pricing : Текущие цены
-pricing --> gateway : 200 OK (prices)
-
-gateway -> orders : Создать заказ
-orders -> orders_db : INSERT order (PENDING)
-orders_db --> orders : order_id
-
-orders -> inventory : Зарезервировать товары
-inventory -> inventory_db : UPDATE stock (reserve)
-inventory_db --> inventory : 200 OK
-inventory --> orders : 200 OK
-
-orders --> gateway : 201 Created (order_data)
-gateway --> spa : 201 Order created
-spa --> customer : Подтверждение заказа
-
-orders -> payments : Инициировать платеж\n(order_id, amount)
-payments -> payments_db : CREATE payment_record
+gateway -> payments : Создать платеж
+payments -> payments_db : INSERT payment (PENDING)
 payments_db --> payments : payment_id
+payments -> payment_gateway : /charge {card, amount, order_id}
+payment_gateway --> payments : payment_status (PROCESSING)
 
-payments -> payment_gateway : /payments/create {card, amount}
-payment_gateway --> payments : payment_url
+payments --> gateway : 202 Payment Processing
+gateway --> spa : Перенаправить на страницу ожидания
+spa -> customer : "Платеж обрабатывается..."
 
-payments --> orders : Payment initiated
-orders -> orders_db : UPDATE order (AWAITING_PAYMENT)
-
-payments -> spa : Перенаправить на payment_url
-spa -> customer : Перенаправление на оплату
-
-customer -> payment_gateway : Оплата картой
-payment_gateway --> payments : Webhook (payment_success)
-
-payments -> payments_db : UPDATE payment (COMPLETED)
-payments_db --> payments : OK
-
-payments -> orders : Payment completed
-orders -> orders_db : UPDATE order (PAID)
-orders_db --> orders : OK
-
-orders -> inventory : Подтвердить резерв
-inventory -> inventory_db : CONFIRM reservation
-inventory_db --> inventory : OK
-inventory --> orders : OK
-
-orders -> logistics_service : Начать обработку доставки
-orders --> notifications : Уведомить клиента
-notifications --> customer : "Заказ оплачен, готовится к отправке"
+payment_gateway -> payments : Webhook /callback (status=SUCCESS)
+alt Успешный платеж
+    payments -> payments_db : UPDATE payment (SUCCESS)
+    payments_db --> payments : OK
+    payments -> orders : Уведомить об оплате
+    orders -> orders_db : UPDATE order (PAID)
+    orders_db --> orders : OK
+    orders --> notifications : "Платеж успешен"
+    notifications --> customer : "Оплата подтверждена"
+    
+else Ошибка платежа
+    payments -> payments_db : UPDATE payment (FAILED)
+    payments_db --> payments : OK
+    payments -> orders : Уведомить об ошибке
+    orders -> orders_db : UPDATE order (PAYMENT_FAILED)
+    orders_db --> orders : OK
+    orders --> notifications : "Платеж отклонен"
+    notifications --> customer : "Ошибка оплаты"
+end
 
 @enduml
