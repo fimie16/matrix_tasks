@@ -1,26 +1,82 @@
-@startuml
-title Обработка платежа
+@startuml order_creation_with_payment
+title Оформление заказа с обработкой платежа
 
-actor Клиент
-participant "Веб-приложение" as WebApp
-participant "API Gateway" as APIGateway
-participant "Сервис платежей" as PaymentService
-participant "База данных платежей" as PaymentDB
-participant "Банки" as Banks
-participant "Сервис уведомлений" as NotificationService
+actor Клиент as customer
+participant "Веб-интерфейс (SPA)" as spa
+participant "API Gateway" as gateway
+participant "Сервис аутентификации" as auth
+participant "Сервис товаров" as products
+database "БД товаров" as products_db
+participant "Сервис цен" as pricing
+database "БД цен" as pricing_db
+participant "Сервис заказов" as orders
+database "БД заказов" as orders_db
+participant "Сервис склада" as inventory
+database "БД склада" as inventory_db
+participant "Сервис платежей" as payment
+database "БД платежей" as payments_db
+participant "Платежный шлюз" as payment_gateway
+participant "Сервис уведомлений" as notifications
 
-Клиент -> WebApp: Выбирает способ оплаты и подтверждает платеж
-WebApp -> APIGateway: Отправляет запрос на обработку платежа
-APIGateway -> PaymentService: Передает данные платежа
-PaymentService -> PaymentDB: Сохраняет информацию о платеже
-PaymentDB --> PaymentService: Подтверждает сохранение
-PaymentService -> Banks: Отправляет запрос на обработку платежа
-Banks --> PaymentService: Возвращает статус платежа
-PaymentService -> PaymentDB: Обновляет статус платежа
-PaymentDB --> PaymentService: Подтверждает обновление
-PaymentService -> NotificationService: Отправляет уведомление о статусе платежа
-NotificationService --> PaymentService: Подтверждает отправку уведомления
-PaymentService --> APIGateway: Возвращает статус платежа
-APIGateway --> WebApp: Возвращает статус платежа
-WebApp --> Клиент: Отображает статус платежа
+customer -> spa : Оформление заказа
+spa -> gateway : POST /orders {items}
+
+gateway -> auth : Проверить токен
+auth --> gateway : 200 OK (user_id)
+
+gateway -> products : Проверить наличие товаров
+products -> products_db : SELECT availability
+products_db --> products : Данные о наличии
+products --> gateway : 200 OK (available_items)
+
+gateway -> pricing : Получить актуальные цены
+pricing -> pricing_db : SELECT current_prices
+pricing_db --> pricing : Текущие цены
+pricing --> gateway : 200 OK (prices)
+
+gateway -> orders : Создать заказ
+orders -> orders_db : INSERT order (PENDING)
+orders_db --> orders : order_id
+
+orders -> inventory : Зарезервировать товары
+inventory -> inventory_db : UPDATE stock (reserve)
+inventory_db --> inventory : 200 OK
+inventory --> orders : 200 OK
+
+orders --> gateway : 201 Created (order_data)
+gateway --> spa : 201 Order created
+spa --> customer : Подтверждение заказа
+
+orders -> payments : Инициировать платеж\n(order_id, amount)
+payments -> payments_db : CREATE payment_record
+payments_db --> payments : payment_id
+
+payments -> payment_gateway : /payments/create {card, amount}
+payment_gateway --> payments : payment_url
+
+payments --> orders : Payment initiated
+orders -> orders_db : UPDATE order (AWAITING_PAYMENT)
+
+payments -> spa : Перенаправить на payment_url
+spa -> customer : Перенаправление на оплату
+
+customer -> payment_gateway : Оплата картой
+payment_gateway --> payments : Webhook (payment_success)
+
+payments -> payments_db : UPDATE payment (COMPLETED)
+payments_db --> payments : OK
+
+payments -> orders : Payment completed
+orders -> orders_db : UPDATE order (PAID)
+orders_db --> orders : OK
+
+orders -> inventory : Подтвердить резерв
+inventory -> inventory_db : CONFIRM reservation
+inventory_db --> inventory : OK
+inventory --> orders : OK
+
+orders -> logistics_service : Начать обработку доставки
+orders --> notifications : Уведомить клиента
+notifications --> customer : "Заказ оплачен, готовится к отправке"
+
 @enduml
