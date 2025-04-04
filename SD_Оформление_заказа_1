@@ -1,30 +1,67 @@
-@startuml
-title Оформление заказа
+@startuml order_creation_improved
+title Оформление заказа (микросервисы с отдельными БД)
 
-actor Клиент
-participant "Веб-приложение" as WebApp
-participant "API Gateway" as APIGateway
-participant "Сервис заказов" as OrderService
-participant "База данных заказов" as OrderDB
-participant "Сервис уведомлений" as NotificationService
-participant "Логистический сервис" as LogisticsService
-participant "Сервис товаров" as ProductService
-participant "Сервис клиентов" as CustomerService
+actor Клиент as client
+participant "Веб-интерфейс" as web
+participant "API Gateway" as gateway
+participant "Аутентификация" as auth
+database "БД Аутентификации" as auth_db
+participant "Товары" as products
+database "БД Товаров" as products_db
+participant "Цены" as pricing
+database "БД Цен" as pricing_db
+participant "Заказы" as orders
+database "БД Заказов" as orders_db
+participant "Склад" as inventory
+database "БД Склада" as inventory_db
 
-Клиент -> WebApp: Выбирает товары и оформляет заказ
-WebApp -> APIGateway: Отправляет запрос на создание заказа
-APIGateway -> OrderService: Передает данные заказа
-OrderService -> ProductService: Проверяет наличие товаров
-ProductService --> OrderService: Возвращает информацию о товарах
-OrderService -> CustomerService: Проверяет данные клиента
-CustomerService --> OrderService: Возвращает данные клиента
-OrderService -> OrderDB: Сохраняет заказ
-OrderDB --> OrderService: Подтверждает сохранение
-OrderService -> LogisticsService: Отправляет данные заказа для доставки
-LogisticsService --> OrderService: Подтверждает получение данных
-OrderService -> NotificationService: Отправляет уведомление о создании заказа
-NotificationService --> OrderService: Подтверждает отправку уведомления
-OrderService --> APIGateway: Возвращает статус заказа
-APIGateway --> WebApp: Возвращает статус заказа
-WebApp --> Клиент: Отображает подтверждение заказа
+client -> web : "Оформить заказ"
+web -> gateway : POST /orders
+
+gateway -> auth : Валидация токена
+auth -> auth_db : Проверить токен
+
+alt Невалидный токен
+    auth --> gateway : 401 Unauthorized
+    gateway --> web : 401 Unauthorized
+    web --> client : "Требуется вход"
+else
+    auth --> gateway : 200 OK (user_id)
+    
+    gateway -> products : Проверить наличие
+    products -> products_db : SELECT inventory
+    products_db --> products : Остатки
+    
+    alt Нет в наличии
+        products --> gateway : 400 Bad Request
+        gateway --> web : "Товар недоступен"
+        web --> client : Показать ошибку
+    else
+        products --> gateway : 200 OK
+        gateway -> pricing : Получить цены
+        pricing -> pricing_db : SELECT prices
+        pricing_db --> pricing : Актуальные цены
+        pricing --> gateway : 200 OK (prices)
+        
+        gateway -> orders : Создать заказ
+        orders -> inventory : Зарезервировать
+        inventory -> inventory_db : UPDATE stock
+        
+        alt Ошибка резерва
+            inventory_db --> inventory : 409 Conflict
+            inventory --> orders : 409 Conflict
+            orders --> gateway : "Не удалось зарезервировать"
+            gateway --> web : 409 Conflict
+            web --> client : "Ошибка резерва"
+        else
+            inventory_db --> inventory : 200 OK
+            inventory --> orders : 200 OK
+            orders -> orders_db : INSERT order
+            orders_db --> orders : order_id
+            orders --> gateway : 201 Created
+            gateway --> web : 201 (order_data)
+            web --> client : "Заказ создан"
+        end
+    end
+end
 @enduml
