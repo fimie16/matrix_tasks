@@ -1,5 +1,4 @@
 @startuml payment_processing_sequence
-title Процессинг платежа
 
 actor Клиент as customer
 participant "Веб-интерфейс (SPA)" as spa
